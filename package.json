@@ -1,0 +1,77 @@
+{
+  "_args": [
+    [
+      "react-native-smartconfig@latest",
+      "/Users/me/src/pipes/pipesApp"
+    ]
+  ],
+  "_from": "react-native-smartconfig@latest",
+  "_id": "react-native-smartconfig@0.2.1",
+  "_inCache": true,
+  "_installable": true,
+  "_location": "/react-native-smartconfig",
+  "_nodeVersion": "5.5.0",
+  "_npmOperationalInternal": {
+    "host": "packages-9-west.internal.npmjs.com",
+    "tmp": "tmp/react-native-smartconfig-0.2.1.tgz_1456152044068_0.5628036721609533"
+  },
+  "_npmUser": {
+    "email": "tuanpm@live.com",
+    "name": "tuanpm"
+  },
+  "_npmVersion": "3.3.12",
+  "_phantomChildren": {},
+  "_requested": {
+    "name": "react-native-smartconfig",
+    "raw": "react-native-smartconfig@latest",
+    "rawSpec": "latest",
+    "scope": null,
+    "spec": "latest",
+    "type": "tag"
+  },
+  "_requiredBy": [
+    "/"
+  ],
+  "_resolved": "https://registry.npmjs.org/react-native-smartconfig/-/react-native-smartconfig-0.2.1.tgz",
+  "_shasum": "1f13a31469257bc8fb79e15c864762ab2d58da8a",
+  "_shrinkwrap": null,
+  "_spec": "react-native-smartconfig@latest",
+  "_where": "/Users/me/src/pipes/pipesApp",
+  "author": {
+    "email": "Tuan PM"
+  },
+  "dependencies": {},
+  "description": "react-native ESP8266 smartconfig module",
+  "devDependencies": {},
+  "directories": {},
+  "dist": {
+    "shasum": "1f13a31469257bc8fb79e15c864762ab2d58da8a",
+    "tarball": "http://registry.npmjs.org/react-native-smartconfig/-/react-native-smartconfig-0.2.1.tgz"
+  },
+  "gitHead": "3dcd4b8e05b6c147157fbfbec00aba2aae134480",
+  "keywords": [
+    "react-native",
+    "react",
+    "native",
+    "iot",
+    "esp8266",
+    "smartconfig",
+    "esptouch",
+    "airkiss"
+  ],
+  "license": "MIT",
+  "maintainers": [
+    {
+      "email": "tuanpm@live.com",
+      "name": "tuanpm"
+    }
+  ],
+  "name": "react-native-smartconfig",
+  "nativePackage": true,
+  "optionalDependencies": {},
+  "readme": "ERROR: No README data found!",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "version": "0.2.1"
+}
