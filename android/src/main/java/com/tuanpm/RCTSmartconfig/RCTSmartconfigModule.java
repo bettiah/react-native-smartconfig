@@ -4,44 +4,28 @@
 
 package com.tuanpm.RCTSmartconfig;
 
-import android.net.Uri;
-import android.os.Environment;
-import android.provider.MediaStore;
-import android.util.Base64;
-import android.util.Log;
-import android.widget.Toast;
 import android.os.AsyncTask;
-import android.os.Bundle;
-
-import com.facebook.react.bridge.*;
-
-import javax.annotation.Nullable;
-import java.io.*;
-import java.text.SimpleDateFormat;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.List;
+import android.util.Log;
 
 import com.espressif.iot.esptouch.EsptouchTask;
-import com.espressif.iot.esptouch.IEsptouchListener;
 import com.espressif.iot.esptouch.IEsptouchResult;
-import com.espressif.iot.esptouch.IEsptouchTask;
-import com.espressif.iot.esptouch.task.__IEsptouchTask;
+import com.facebook.react.bridge.Arguments;
+import com.facebook.react.bridge.Promise;
+import com.facebook.react.bridge.ReactApplicationContext;
+import com.facebook.react.bridge.ReactContextBaseJavaModule;
+import com.facebook.react.bridge.ReactMethod;
+import com.facebook.react.bridge.ReadableMap;
+import com.facebook.react.bridge.WritableArray;
+import com.facebook.react.bridge.WritableMap;
+
+import java.util.List;
 
 public class RCTSmartconfigModule extends ReactContextBaseJavaModule {
-
     private static final String TAG = "RCTSmartconfigModule";
-
-    private final ReactApplicationContext _reactContext;
-
-    private IEsptouchTask mEsptouchTask;
+    private static final int TIMEOUT_MS = 15000+6000;
 
     public RCTSmartconfigModule(ReactApplicationContext reactContext) {
         super(reactContext);
-        _reactContext = reactContext;
-
     }
 
     @Override
@@ -49,126 +33,62 @@ public class RCTSmartconfigModule extends ReactContextBaseJavaModule {
         return "Smartconfig";
     }
 
-    @ReactMethod
-    public void stop() {
-      if (mEsptouchTask != null) {
-        Log.d(TAG, "cancel task");
-        mEsptouchTask.interrupt();
-      }
-    }
+    void onFinished(List<IEsptouchResult> result, final Promise promise) {
+        final WritableArray ret = Arguments.createArray();
 
-    @ReactMethod
-    public void start(final ReadableMap options, final Promise promise) {
-      String ssid = options.getString("ssid");
-      String pass = options.getString("password");
-      Boolean hidden = false;
-      //Int taskResultCountStr = 1;
-      Log.d(TAG, "ssid " + ssid + ":pass " + pass);
-      stop();
-      new EsptouchAsyncTask(new TaskListener() {
-        @Override
-        public void onFinished(List<IEsptouchResult> result) {
-            // Do Something after the task has finished
-
-            WritableArray ret = Arguments.createArray();
-
-            Boolean resolved = false;
-            for (IEsptouchResult resultInList : result) {
-              if(!resultInList.isCancelled() &&resultInList.getBssid() != null) {
-                WritableMap map = Arguments.createMap();
+        boolean resolved = false;
+        for (IEsptouchResult resultInList : result) {
+            if (!resultInList.isCancelled() && resultInList.getBssid() != null) {
+                final WritableMap map = Arguments.createMap();
                 map.putString("bssid", resultInList.getBssid());
                 map.putString("ipv4", resultInList.getInetAddress().getHostAddress());
                 ret.pushMap(map);
                 resolved = true;
                 if (!resultInList.isSuc())
-                  break;
+                    break;
+            }
+        }
 
-              }
+        if (resolved) {
+            Log.d(TAG, "Smartconfig success");
+            promise.resolve(ret);
+        } else {
+            promise.reject(new Throwable("Smartconfig Error"));
+        }
+    }
+
+    @ReactMethod
+    public void start(final ReadableMap options, final Promise promise) {
+        String ssid = options.getString("ssid");
+        String pass = options.getString("password");
+        Log.d(TAG, "ssid " + ssid + ":pass " + pass);
+
+        new AsyncTask<String, Void, List<IEsptouchResult>>() {
+            @Override
+            protected List<IEsptouchResult> doInBackground(String... params) {
+                Log.d(TAG, "doing task");
+                final String apSsid = params[0];
+                final String apBssid = params[1];
+                final String apPassword = params[2];
+                final String isSsidHiddenStr = params[3];
+                final String taskResultCountStr = params[4];
+                final boolean isSsidHidden = isSsidHiddenStr.equals("YES");
+                final int taskResultCount = Integer.parseInt(taskResultCountStr);
+                return new EsptouchTask(apSsid, apBssid, apPassword,
+                        isSsidHidden, TIMEOUT_MS, getCurrentActivity()).executeForResults(taskResultCount);
             }
 
-            if(resolved) {
-              Log.d(TAG, "Success run smartconfig");
-              promise.resolve(ret);
-            } else {
-              Log.d(TAG, "Error run smartconfig");
-              promise.reject("new IllegalViewOperationException()");
+            @Override
+            protected void onPostExecute(List<IEsptouchResult> result) {
+                Log.d(TAG, "finished task");
+                final IEsptouchResult firstResult = result.get(0);
+                // check whether the task is cancelled and no results received
+                if (!firstResult.isCancelled()) {
+                    onFinished(result, promise);
+                }
             }
 
-        }
-      }).execute(ssid, new String(""), pass, "YES", "1");
-      //promise.resolve(encoded);
-      //promise.reject("Error creating media file.");
-      //
-      //Toast.makeText(getReactApplicationContext(), ssid + ":" + pass, 10).show();
-    }
+        }.execute(ssid, new String(""), pass, "YES", "1"); // end AsyncTask
 
-
-    public interface TaskListener {
-        public void onFinished(List<IEsptouchResult> result);
-    }
-
-    private class EsptouchAsyncTask extends AsyncTask<String, Void, List<IEsptouchResult>> {
-
-      //
-      // public interface TaskListener {
-      //     public void onFinished(List<IEsptouchResult> result);
-      // }
-      private final TaskListener taskListener;
-
-      public EsptouchAsyncTask(TaskListener listener) {
-        // The listener reference is passed in through the constructor
-        this.taskListener = listener;
-      }
-
-
-      // without the lock, if the user tap confirm and cancel quickly enough,
-      // the bug will arise. the reason is follows:
-      // 0. task is starting created, but not finished
-      // 1. the task is cancel for the task hasn't been created, it do nothing
-      // 2. task is created
-      // 3. Oops, the task should be cancelled, but it is running
-      private final Object mLock = new Object();
-
-      @Override
-      protected void onPreExecute() {
-        Log.d(TAG, "Begin task");
-      }
-      @Override
-      protected List<IEsptouchResult> doInBackground(String... params) {
-        Log.d(TAG, "doing task");
-        int taskResultCount = -1;
-        synchronized (mLock) {
-          String apSsid = params[0];
-          String apBssid =  params[1];
-          String apPassword = params[2];
-          String isSsidHiddenStr = params[3];
-          String taskResultCountStr = params[4];
-          boolean isSsidHidden = false;
-          if (isSsidHiddenStr.equals("YES")) {
-            isSsidHidden = true;
-          }
-          taskResultCount = Integer.parseInt(taskResultCountStr);
-          mEsptouchTask = new EsptouchTask(apSsid, apBssid, apPassword,
-              isSsidHidden, getCurrentActivity());
-
-          //mEsptouchTask.setEsptouchListener(myListener);
-        }
-        List<IEsptouchResult> resultList = mEsptouchTask.executeForResults(taskResultCount);
-        return resultList;
-      }
-
-      @Override
-      protected void onPostExecute(List<IEsptouchResult> result) {
-
-        IEsptouchResult firstResult = result.get(0);
-        // check whether the task is cancelled and no results received
-        if (!firstResult.isCancelled()) {
-          if(this.taskListener != null) {
-
-           // And if it is we call the callback function on it.
-           this.taskListener.onFinished(result);
-         }
-        }
-      }
-    }
+    } // start
 }
